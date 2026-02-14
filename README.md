@@ -38,3 +38,29 @@ Periodic sync
 
 If you set `SANITY_PROJECT_ID`, the app will run an immediate sync at startup and schedule periodic syncs every `SYNC_INTERVAL_SECONDS` (default 3600). You can adjust `SYNC_INTERVAL_SECONDS` in your environment.
 
+Recent additions
+----------------
+
+- `docs/agent.md` and `docs/skills.md`: design and operational documentation for the agent and skills architecture.
+- `backend/app/ai_skills/example_skill.py`: example skill implementing the `run_skill(input: dict) -> dict` contract.
+- `backend/app/skills_registry.py`: dynamic loader/registry for skills under `backend/app/ai_skills/`.
+- `backend/app/ai_client.py` updated to attempt executing a registered skill (env `JUSTIFICATION_SKILL` or first available) before calling the LLM; also respects `OLLAMA_TIMEOUT`.
+- `tests/test_skill_contract.py`: contract test asserting that `example_skill` integrates with `ai_client`.
+
+How to run the new contract test locally:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r backend/requirements.txt
+pip install pytest
+pytest -q tests/test_skill_contract.py
+```
+
+Notes
+-----
+
+- I added a `.gitignore` to avoid committing `.venv` and other Python artifacts. If you already committed a virtual environment, consider removing it from the repo and keeping the `.gitignore`.
+- The scheduler currently uses an in-process `APScheduler`. For production scaling we recommend leader-election via Redis or externalizing periodic work to a worker queue — see `docs/agent.md` for details.
+
+
