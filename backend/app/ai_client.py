@@ -34,7 +34,7 @@ def _build_prompt(user_input: Dict, top_stack: Dict) -> str:
     return prompt
 
 
-def _run_skill_if_available(user_input: Dict, top_stack: Dict) -> str:
+def _run_skill_if_available(user_input: Dict, top_stack: Dict, skill_name: str = None) -> str:
     """Intenta ejecutar una skill registrada para generar la justificación.
 
     Prioridad de selección de skill:
@@ -42,7 +42,8 @@ def _run_skill_if_available(user_input: Dict, top_stack: Dict) -> str:
     2) primera skill registrada (si existe)
     Si falla o no existe, devuelve None para indicar que hay que usar LLM/fallback.
     """
-    skill_name = os.getenv("JUSTIFICATION_SKILL")
+    # precedence: explicit skill_name param > JUSTIFICATION_SKILL env var > first registered skill
+    skill_name = skill_name or os.getenv("JUSTIFICATION_SKILL")
     try:
         if not skill_name:
             skills = all_skills()
@@ -78,9 +79,9 @@ def _run_skill_if_available(user_input: Dict, top_stack: Dict) -> str:
     return None
 
 
-def generate_justification(user_input: Dict, top_stack: Dict) -> str:
-    # 1) Intentar skill registrado
-    text = _run_skill_if_available(user_input, top_stack)
+def generate_justification(user_input: Dict, top_stack: Dict, skill_name: str = None) -> str:
+    # 1) Intentar skill registrado (puede pasar un nombre de skill explícito)
+    text = _run_skill_if_available(user_input, top_stack, skill_name=skill_name)
     if text:
         return text
 
