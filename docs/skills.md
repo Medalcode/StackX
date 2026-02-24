@@ -58,6 +58,29 @@ def run_skill(input: dict) -> dict:
     return {"status": "ok", "result": {"text": text}}
 ```
 
+## Super-Skills Paramétricas (Consolidación)
+
+Para evitar la fragmentación, se prefieren "Super-Skills" que aceptan parámetros para variar su comportamiento.
+
+### 1. `ContentGeneratorSkill`
+**Propósito:** Sustituye a `JustificationSkill`, `TradeOffSkill` y `SummarySkill`.
+**Parámetros clave:**
+- `mode`: `"full_justification" | "concise_summary" | "technical_comparison"`.
+- `target_audience`: `"cto" | "developer" | "product_owner"`.
+
+### 2. `DataAnalysisSkill`
+**Propósito:** Sustituye a `ScoringSkill`, `WeightCalculatorSkill` y `CompatibilitySkill`.
+**Parámetros clave:**
+- `operation`: `"calculate_stack_score" | "validate_compatibility" | "enrich_metadata"`.
+
+## Registro de Skills Activas
+
+Actualmente, las skills se han consolidado de la siguiente manera:
+- `backend/app/ai_skills/content_generator.py` (Versátil)
+- `backend/app/ai_skills/data_analysis.py` (Versátil)
+
+---
+
 ## Timeouts, retries y manejo de errores
 
 - Cada skill debe respetar `TIMEOUT_SECONDS` si está definido.
@@ -75,6 +98,6 @@ def run_skill(input: dict) -> dict:
 
 ## Checklist de despliegue
 
-- Variables de entorno necesarias documentadas en `docs/agent.md`.
+- Variables de entorno necesarias documentadas en `docs/agents.md`.
 - Permisos para tokens (Sanity, LLM) correctamente configurados.
 - Monitoreo (logs + métricas) habilitado para la skill.

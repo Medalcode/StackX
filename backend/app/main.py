@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from .database import engine
 from .models import Base
 from .routes import recommend, admin
-from . import sanity_sync, scheduler
+from . import sanity_sync
+from .sanity_sync import start_scheduler, shutdown_scheduler
 import os
 
 app = FastAPI(title='Stack Recommender')
@@ -24,6 +25,6 @@ def on_startup():
             pass
         # schedule periodic sync
         try:
-            scheduler.start_scheduler(sanity_sync.sync)
+            start_scheduler(sanity_sync.sync)
         except Exception:
             pass

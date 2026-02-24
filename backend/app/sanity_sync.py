@@ -1,5 +1,6 @@
 import os
 import requests
+from typing import Callable, Optional
 from sqlalchemy.orm import Session
 from .database import SessionLocal
 from .models import Category, Technology
@@ -55,6 +56,44 @@ def sync():
         upsert_technologies(db, techs)
     finally:
         db.close()
+
+# ---------------------------------------------------------------------------
+# Scheduler (fusionado desde scheduler.py para reducir atomización)
+# ---------------------------------------------------------------------------
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.interval import IntervalTrigger
+    _APScheduler = BackgroundScheduler
+except ImportError:
+    _APScheduler = None
+
+_scheduler: Optional[object] = None
+
+
+def start_scheduler(job_func: Callable):
+    """Inicia el scheduler de fondo para sincronizaciones periódicas."""
+    global _scheduler
+    if _scheduler is not None or _APScheduler is None:
+        return
+    interval = int(os.getenv('SYNC_INTERVAL_SECONDS', '3600'))
+    _scheduler = _APScheduler()
+    _scheduler.add_job(
+        job_func,
+        trigger=IntervalTrigger(seconds=interval),
+        id='sanity_sync',
+        replace_existing=True,
+    )
+    _scheduler.start()
+
+
+def shutdown_scheduler():
+    """Detiene el scheduler de fondo si está activo."""
+    global _scheduler
+    if _scheduler is None:
+        return
+    _scheduler.shutdown(wait=False)
+    _scheduler = None
+
 
 if __name__ == '__main__':
     sync()
