@@ -1,7 +1,9 @@
 import os
+from collections.abc import Callable
+
 import requests
-from typing import Callable, Optional
 from sqlalchemy.orm import Session
+
 from .database import SessionLocal
 from .models import Category, Technology
 
@@ -67,7 +69,7 @@ try:
 except ImportError:
     _APScheduler = None
 
-_scheduler: Optional[object] = None
+_scheduler: object | None = None
 
 
 def start_scheduler(job_func: Callable):

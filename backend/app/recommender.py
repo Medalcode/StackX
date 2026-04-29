@@ -1,8 +1,10 @@
-from sqlalchemy.orm import Session
-from .models import Technology
-from typing import List, Dict
 
-def calculate_score_for_tech(tech: Technology, user_weights: Dict[str, float]) -> float:
+from sqlalchemy.orm import Session
+
+from .models import Technology
+
+
+def calculate_score_for_tech(tech: Technology, user_weights: dict[str, float]) -> float:
     total_score = 0.0
     total_weights = sum(user_weights.values()) if user_weights else 0.0
 
@@ -15,7 +17,7 @@ def calculate_score_for_tech(tech: Technology, user_weights: Dict[str, float]) -
         return 0.0
     return total_score / total_weights
 
-def get_recommendations(db: Session, user_weights: Dict[str, float], top_n: int = 3) -> List[Dict]:
+def get_recommendations(db: Session, user_weights: dict[str, float], top_n: int = 3) -> list[dict]:
     technologies = db.query(Technology).all()
     results = []
 

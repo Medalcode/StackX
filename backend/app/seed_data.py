@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
-from .models import Category, Technology, Attribute, TechScore
+
+from .models import Attribute, Category, Technology, TechScore
+
 
 def seed(db: Session):
     # categories

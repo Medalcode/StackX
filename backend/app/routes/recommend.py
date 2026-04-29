@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
+
+from .. import ai_client, recommender
 from ..database import get_db
-from .. import recommender, ai_client
-from ..schemas import UserWeights, RecommendationResponse, RecommendationItem
+from ..schemas import RecommendationItem, RecommendationResponse, UserWeights
 
 router = APIRouter()
 

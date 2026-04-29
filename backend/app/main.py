@@ -1,10 +1,12 @@
+import os
+
 from fastapi import FastAPI
+
+from . import sanity_sync
 from .database import engine
 from .models import Base
-from .routes import recommend, admin
-from . import sanity_sync
-from .sanity_sync import start_scheduler, shutdown_scheduler
-import os
+from .routes import admin, recommend
+from .sanity_sync import start_scheduler
 
 app = FastAPI(title='Stack Recommender')
 

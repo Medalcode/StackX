@@ -1,7 +1,7 @@
-import os
 import logging
+import os
+
 import requests
-from typing import Dict
 
 logger = logging.getLogger("stackx.ai_client")
 logger.setLevel(logging.INFO)
@@ -10,7 +10,7 @@ OLLAMA_URL = os.getenv("OLLAMA_URL")
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "10"))
 
 try:
-    from .skills_registry import get_skill, all_skills, load_all_skills
+    from .skills_registry import all_skills, get_skill, load_all_skills
     try:
         load_all_skills()
     except Exception:
@@ -24,7 +24,7 @@ except Exception:
         return []
 
 
-def _build_prompt(user_input: Dict, top_stack: Dict) -> str:
+def _build_prompt(user_input: dict, top_stack: dict) -> str:
     proyecto = user_input.get("proyecto", "un proyecto")
     prioridades = user_input.get("weights", {})
     prompt = (
@@ -37,7 +37,7 @@ def _build_prompt(user_input: Dict, top_stack: Dict) -> str:
     return prompt
 
 
-def _run_skill_if_available(user_input: Dict, top_stack: Dict, skill_name: str = None) -> str:
+def _run_skill_if_available(user_input: dict, top_stack: dict, skill_name: str = None) -> str:
     """Intenta ejecutar una skill registrada para generar la justificación.
 
     Prioridad de selección de skill:
@@ -82,7 +82,7 @@ def _run_skill_if_available(user_input: Dict, top_stack: Dict, skill_name: str =
     return None
 
 
-def generate_justification(user_input: Dict, top_stack: Dict, skill_name: str = None) -> str:
+def generate_justification(user_input: dict, top_stack: dict, skill_name: str = None) -> str:
     # 1) Intentar skill registrado (puede pasar un nombre de skill explícito)
     text = _run_skill_if_available(user_input, top_stack, skill_name=skill_name)
     if text:

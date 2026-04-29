@@ -1,5 +1,7 @@
-from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 import os
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+
 from .. import sanity_sync
 
 router = APIRouter()

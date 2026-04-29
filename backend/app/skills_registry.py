@@ -7,15 +7,14 @@ API pública mínima:
 - `get_skill(name)` -> module or None
 - `all_skills()` -> List[str]
 """
-from pathlib import Path
 import importlib.util
 import sys
-from typing import Optional, Dict
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SKILLS_FOLDER = ROOT / "ai_skills"
 
-_registry: Dict[str, object] = {}
+_registry: dict[str, object] = {}
 
 
 def _load_module_from_path(path: Path):
@@ -46,7 +45,7 @@ def load_all_skills():
             continue
 
 
-def get_skill(name: str) -> Optional[object]:
+def get_skill(name: str) -> object | None:
     return _registry.get(name)
 
 
