@@ -77,6 +77,10 @@ npm install
 npm run dev
 ```
 
+### Vercel (frontend)
+
+El repositorio incluye un `vercel.json` en la raíz que apunta Vercel al subdirectorio `frontend/`. No se requiere ninguna configuración adicional en el dashboard de Vercel; importar el repositorio es suficiente.
+
 ### Docker Compose (todo junto)
 
 ```bash
