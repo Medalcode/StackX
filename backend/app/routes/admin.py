@@ -1,6 +1,5 @@
-from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException
 import os
-from .. import sanity_sync
 
 router = APIRouter()
 
@@ -24,11 +23,13 @@ def _validate_admin_token(request: Request):
 
 
 @router.post('/sync-groq/')
-def trigger_sanity_sync(background_tasks: BackgroundTasks, request: Request):
-    """Trigger a background sync from Sanity/GROQ into the local DB.
+def trigger_sanity_sync(request: Request):
+    """Enqueue a Sanity/GROQ sync job via Celery and return the job id.
 
     Protects the endpoint with `ADMIN_TOKEN` when that env var is set.
     """
     _validate_admin_token(request)
-    background_tasks.add_task(sanity_sync.sync)
-    return {"status": "accepted", "detail": "Sanity sync scheduled"}
+
+    from ..tasks import sync_sanity  # imported here to avoid circular imports at module load
+    result = sync_sanity.delay()
+    return {"status": "queued", "job_id": result.id}

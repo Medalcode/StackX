@@ -1,4 +1,4 @@
-.PHONY: up down build logs shell-backend shell-frontend
+.PHONY: up down build logs shell-backend shell-frontend shell-worker shell-beat logs-worker logs-beat
 
 up:
 	docker-compose up --build
@@ -17,3 +17,15 @@ shell-backend:
 
 shell-frontend:
 	docker-compose exec frontend sh
+
+shell-worker:
+	docker-compose exec worker sh
+
+shell-beat:
+	docker-compose exec beat sh
+
+logs-worker:
+	docker-compose logs -f worker
+
+logs-beat:
+	docker-compose logs -f beat
