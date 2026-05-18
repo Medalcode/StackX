@@ -1,3 +1,5 @@
+[![Demo](https://img.shields.io/badge/Demo-Vercel-000000?style=flat-square&logo=vercel)](https://stackx-frontend.vercel.app)
+
 # StackX — Recomendador de Stack Tecnológico
 
 Backend con FastAPI, SQLAlchemy y un motor de recomendación por pesos ponderados. Incluye integración opcional con LLM (Ollama) y Sanity/GROQ para gestión de contenido.
