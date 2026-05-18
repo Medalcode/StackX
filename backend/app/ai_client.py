@@ -1,19 +1,22 @@
 import os
+import logging
 import requests
 from typing import Dict
 
-OLLAMA_URL = os.getenv("OLLAMA_URL")  # e.g. http://localhost:11434/v1/generate
+logger = logging.getLogger("stackx.ai_client")
+logger.setLevel(logging.INFO)
+
+OLLAMA_URL = os.getenv("OLLAMA_URL")
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "10"))
 
-# Intentar importar el registry de skills; la app ya contiene `backend/app/skills_registry.py`
 try:
     from .skills_registry import get_skill, all_skills, load_all_skills
     try:
         load_all_skills()
     except Exception:
-        pass
+        logger.warning("Failed to load skills on import", exc_info=True)
 except Exception:
-    # Proporcionar stubs si el módulo no está disponible
+    logger.warning("Skills registry not available")
     def get_skill(name):
         return None
 

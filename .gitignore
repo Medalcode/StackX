@@ -17,3 +17,7 @@ build/
 
 # Env files
 .env
+
+# Database
+*.db
+dev.db

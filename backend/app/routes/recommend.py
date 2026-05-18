@@ -13,7 +13,7 @@ def recommend_stack(payload: UserWeights, db: Session = Depends(get_db), justifi
     projects = recommender.get_recommendations(db, user_weights, top_n=3)
     results = []
     for item in projects:
-        justification = ai_client.generate_justification(payload.dict(), item, skill_name=justification_skill)
+        justification = ai_client.generate_justification(payload.model_dump(), item, skill_name=justification_skill)
         team = [
             {"role": "Backend Dev", "count": 1},
             {"role": "Frontend Dev", "count": 1},

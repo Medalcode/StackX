@@ -110,6 +110,19 @@ pytest -q tests/
 
 ---
 
+## Correcciones aplicadas
+
+### Pydantic V2 (crítico)
+`backend/app/routes/recommend.py` usaba `payload.dict()` que falla con Pydantic V2. Reemplazado por `payload.model_dump()`.
+
+### Logging
+Agregado sistema de logging a `backend/app/ai_client.py` para mejor trazabilidad en llamadas al LLM.
+
+### Test de skill contract
+Reescrito `tests/test_skill_contract.py` para probar el flujo de fallback: cuando Ollama no está disponible, la skill `content_generator` retorna una justificación sintética en lugar de lanzar excepción.
+
+---
+
 ## Estructura del proyecto
 
 ```
