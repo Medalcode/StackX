@@ -1,7 +1,7 @@
 import logging
 import os
 
-import requests
+import httpx
 
 logger = logging.getLogger("stackx.ai_client")
 logger.setLevel(logging.INFO)
@@ -82,7 +82,7 @@ def _run_skill_if_available(user_input: dict, top_stack: dict, skill_name: str =
     return None
 
 
-def generate_justification(user_input: dict, top_stack: dict, skill_name: str = None) -> str:
+async def generate_justification(user_input: dict, top_stack: dict, skill_name: str = None) -> str:
     # 1) Intentar skill registrado (puede pasar un nombre de skill explícito)
     text = _run_skill_if_available(user_input, top_stack, skill_name=skill_name)
     if text:
@@ -93,13 +93,14 @@ def generate_justification(user_input: dict, top_stack: dict, skill_name: str = 
 
     if OLLAMA_URL:
         try:
-            r = requests.post(OLLAMA_URL, json={"prompt": prompt}, timeout=OLLAMA_TIMEOUT)
-            r.raise_for_status()
-            data = r.json()
-            # Expect provider to return {'text': '...'} or similar
-            return data.get("text") or data.get("output") or str(data)
-        except Exception:
-            # fallback to local template
+            async with httpx.AsyncClient() as client:
+                r = await client.post(OLLAMA_URL, json={"prompt": prompt}, timeout=OLLAMA_TIMEOUT)
+                r.raise_for_status()
+                data = r.json()
+                # Expect provider to return {'text': '...'} or similar
+                return data.get("text") or data.get("output") or str(data)
+        except Exception as e:
+            logger.error(f"Ollama fallback scenario triggered due to error: {e}")
             pass
 
     # 3) Fallback determinista y seguro

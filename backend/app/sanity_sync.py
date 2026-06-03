@@ -1,8 +1,11 @@
 import os
+import logging
 from collections.abc import Callable
 
 import requests
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from .database import SessionLocal
 from .models import Category, Technology
@@ -19,37 +22,46 @@ def fetch_technologies():
     url = f"https://{SANITY_PROJECT_ID}.api.sanity.io/v{SANITY_API_VERSION}/data/query/{SANITY_DATASET}"
     # Basic GROQ to fetch technology docs; adjust according to your schema
     groq = '*[_type == "technology"]{_id, name, description, category->{name}}'
-    resp = requests.get(url, params={'query': groq}, headers={
-        'Authorization': f'Bearer {SANITY_TOKEN}'
-    } if SANITY_TOKEN else {})
-    resp.raise_for_status()
-    data = resp.json()
-    return data.get('result', [])
+    try:
+        resp = requests.get(url, params={'query': groq}, headers={
+            'Authorization': f'Bearer {SANITY_TOKEN}'
+        } if SANITY_TOKEN else {})
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get('result', [])
+    except Exception as e:
+        logger.error(f"Error fetching from Sanity: {e}")
+        return []
 
 def upsert_technologies(db: Session, techs):
-    for t in techs:
-        name = t.get('name') or t.get('_id')
-        desc = t.get('description')
-        cat = t.get('category', {}).get('name') if t.get('category') else None
+    try:
+        for t in techs:
+            name = t.get('name') or t.get('_id')
+            desc = t.get('description')
+            cat = t.get('category', {}).get('name') if t.get('category') else None
 
-        # find or create category
-        cat_obj = None
-        if cat:
-            cat_obj = db.query(Category).filter_by(name=cat).first()
-            if not cat_obj:
-                cat_obj = Category(name=cat, description=None)
-                db.add(cat_obj)
-                db.commit()
+            # find or create category
+            cat_obj = None
+            if cat:
+                cat_obj = db.query(Category).filter_by(name=cat).first()
+                if not cat_obj:
+                    cat_obj = Category(name=cat, description=None)
+                    db.add(cat_obj)
+                    db.flush()
 
-        tech_obj = db.query(Technology).filter_by(name=name).first()
-        if not tech_obj:
-            tech_obj = Technology(name=name, description=desc, category_id=cat_obj.id if cat_obj else None)
-            db.add(tech_obj)
-        else:
-            tech_obj.description = desc
-            if cat_obj:
-                tech_obj.category_id = cat_obj.id
+            tech_obj = db.query(Technology).filter_by(name=name).first()
+            if not tech_obj:
+                tech_obj = Technology(name=name, description=desc, category_id=cat_obj.id if cat_obj else None)
+                db.add(tech_obj)
+            else:
+                tech_obj.description = desc
+                if cat_obj:
+                    tech_obj.category_id = cat_obj.id
         db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error upserting technologies: {e}")
+        raise
 
 def sync():
     techs = fetch_technologies()

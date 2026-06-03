@@ -9,9 +9,6 @@ router = APIRouter()
 
 def _validate_admin_token(request: Request):
     admin_token = os.getenv('ADMIN_TOKEN')
-    if not admin_token:
-        # No token configured: allow but warn (use infra to protect endpoint in production)
-        return
 
     # Accept either `Authorization: Bearer <token>` or `X-ADMIN-TOKEN: <token>`
     auth = request.headers.get('Authorization')
@@ -21,8 +18,8 @@ def _validate_admin_token(request: Request):
     else:
         supplied = header_token
 
-    if not supplied or supplied != admin_token:
-        raise HTTPException(status_code=403, detail='Forbidden')
+    if not admin_token or not supplied or supplied != admin_token:
+        raise HTTPException(status_code=403, detail='Forbidden: Invalid or missing ADMIN_TOKEN')
 
 
 @router.post('/sync-groq/')

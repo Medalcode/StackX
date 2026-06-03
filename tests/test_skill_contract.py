@@ -5,12 +5,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 
 def test_fallback_justification():
+    import asyncio
     from backend.app import ai_client
 
     user_input = {'weights': {'backend': 1}, 'proyecto': 'Demo'}
     top_stack = {'name': 'FastAPI'}
 
-    text = ai_client.generate_justification(user_input, top_stack)
+    text = asyncio.run(ai_client.generate_justification(user_input, top_stack))
 
     assert isinstance(text, str)
     assert len(text) > 0
@@ -20,11 +21,12 @@ def test_fallback_justification():
 def test_generate_justification_with_ollama_unreachable(monkeypatch):
     """When OLLAMA_URL is set but unreachable, should fall back to template."""
     monkeypatch.setenv("OLLAMA_URL", "http://localhost:1")
+    import asyncio
     from backend.app import ai_client
 
     user_input = {'weights': {'backend': 1}, 'proyecto': 'Demo'}
     top_stack = {'name': 'FastAPI'}
 
-    text = ai_client.generate_justification(user_input, top_stack)
+    text = asyncio.run(ai_client.generate_justification(user_input, top_stack))
     assert isinstance(text, str)
     assert len(text) > 0
