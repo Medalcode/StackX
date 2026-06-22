@@ -1,6 +1,9 @@
+import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from . import sanity_sync
 from .database import engine
@@ -8,25 +11,38 @@ from .models import Base
 from .routes import admin, recommend
 from .sanity_sync import start_scheduler
 
-app = FastAPI(title='Stack Recommender')
+logger = logging.getLogger("stackx.main")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa: ARG001
+    Base.metadata.create_all(bind=engine)
+    if os.getenv('SANITY_PROJECT_ID'):
+        try:
+            sanity_sync.sync()
+        except Exception as e:
+            logger.error("Sanity sync failed on startup: %s", e)
+        try:
+            start_scheduler(sanity_sync.sync)
+        except Exception as e:
+            logger.error("Scheduler start failed: %s", e)
+    yield
+
+
+app = FastAPI(title='Stack Recommender', lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(recommend.router)
 app.include_router(admin.router, prefix='/admin')
 
 
-@app.on_event('startup')
-def on_startup():
-    # Create tables if they don't exist (development)
-    Base.metadata.create_all(bind=engine)
-    # Start periodic sanity sync if SANITY_PROJECT_ID is configured
-    if os.getenv('SANITY_PROJECT_ID'):
-        # run an immediate sync at startup
-        try:
-            sanity_sync.sync()
-        except Exception:
-            pass
-        # schedule periodic sync
-        try:
-            start_scheduler(sanity_sync.sync)
-        except Exception:
-            pass
+@app.get('/health')
+def health():
+    return {"status": "ok", "service": "stackx-backend"}

@@ -1,14 +1,18 @@
 [![Demo](https://img.shields.io/badge/Demo-Vercel-000000?style=flat-square&logo=vercel)](https://stackx-frontend.vercel.app)
+[![CI](https://github.com/medalcode/StackX/actions/workflows/ci.yml/badge.svg)](https://github.com/medalcode/StackX/actions/workflows/ci.yml)
 
 # StackX — Recomendador de Stack Tecnológico
 
-Backend con FastAPI, SQLAlchemy y un motor de recomendación por pesos ponderados. Incluye integración opcional con LLM (Ollama) y Sanity/GROQ para gestión de contenido.
+Backend con FastAPI, SQLAlchemy y un motor de recomendación por pesos ponderados.
+Incluye integración opcional con LLM (Ollama), Sanity/GROQ para gestión de contenido,
+y un sistema de skills registrables para extender la lógica de recomendación.
 
 ---
 
 ## Arquitectura
 
-La arquitectura sigue el principio de **agentes versátiles + super-skills paramétricas**. Ver detalles en [`docs/agents.md`](docs/agents.md) y [`docs/skills.md`](docs/skills.md).
+La arquitectura sigue el principio de **agentes versátiles + super-skills paramétricas**.
+Ver detalles en [`docs/agents.md`](docs/agents.md) y [`docs/skills.md`](docs/skills.md).
 
 ### Agentes
 | Agente | Rol | Skills asociadas |
@@ -28,25 +32,41 @@ La arquitectura sigue el principio de **agentes versátiles + super-skills param
 
 ### Backend
 
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r backend/requirements.txt
 uvicorn backend.app.main:app --reload
 ```
 
-El servidor levanta en `http://localhost:8000` y crea una base de datos SQLite en `dev.db`.
+El servidor levanta en `http://localhost:8000` con SQLite.
+
+### Migraciones (Alembic)
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+Para generar una nueva migración tras cambiar modelos:
+
+```bash
+alembic revision --autogenerate -m "descripcion"
+alembic upgrade head
+```
 
 ### Sembrar datos de ejemplo
 
-```python
+```bash
+python -c "
 from backend.app.database import SessionLocal
 from backend.app.seed_data import seed
 db = next(SessionLocal())
 seed(db)
+"
 ```
 
-### Frontend (Next.js)
+### Frontend (Next.js + Tailwind CSS)
 
 ```bash
 cd frontend
@@ -72,15 +92,24 @@ docker-compose up --build
 | `JUSTIFICATION_SKILL` | — | Nombre de la skill a usar (`content_generator`, etc.) |
 | `SANITY_PROJECT_ID` | — | ID del proyecto Sanity (activa sincronización) |
 | `SANITY_DATASET` | `production` | Dataset de Sanity |
+| `SANITY_API_VERSION` | `2024-01-01` | Versión de la API de Sanity |
 | `SANITY_TOKEN` | — | Token de autenticación Sanity |
 | `SYNC_INTERVAL_SECONDS` | `3600` | Frecuencia de sincronización periódica |
 | `ADMIN_TOKEN` | — | Token para proteger el endpoint `/admin/sync-groq/` |
+| `CORS_ORIGINS` | `*` | Orígenes permitidos (separados por coma) |
 
 Copia `.env.example` a `.env` y configura los valores necesarios.
 
 ---
 
-## Endpoints principales
+## Endpoints
+
+### `GET /health`
+Health check del servicio.
+
+```bash
+curl http://localhost:8000/health
+```
 
 ### `POST /recommend-stack/`
 Devuelve el top-3 de stacks recomendados según los pesos del usuario.
@@ -92,6 +121,13 @@ curl -X POST http://localhost:8000/recommend-stack/ \
 ```
 
 Header opcional `X-Justification-Skill: content_generator` para seleccionar skill explícita.
+
+### `GET /recommend-stack/`
+Versión paginada del mismo endpoint.
+
+```bash
+curl "http://localhost:8000/recommend-stack/?weights=%7B%22Escalabilidad%22%3A0.9%7D&skip=0&limit=5"
+```
 
 ### `POST /admin/sync-groq/`
 Dispara una sincronización desde Sanity/GROQ en background.
@@ -105,23 +141,25 @@ curl -X POST http://localhost:8000/admin/sync-groq/ \
 
 ## Tests
 
-```powershell
+```bash
 pip install pytest
-pytest -q tests/
+pytest -q tests/ -v
 ```
 
----
+Actualmente **28 tests** en 6 suites:
+- `test_api.py` — endpoints REST
+- `test_models.py` — modelo de datos SQLAlchemy
+- `test_recommender.py` — motor de recomendación
+- `test_schemas.py` — schemas Pydantic
+- `test_skill_contract.py` — skills y fallback LLM
 
-## Correcciones aplicadas
+### Lint
 
-### Pydantic V2 (crítico)
-`backend/app/routes/recommend.py` usaba `payload.dict()` que falla con Pydantic V2. Reemplazado por `payload.model_dump()`.
-
-### Logging
-Agregado sistema de logging a `backend/app/ai_client.py` para mejor trazabilidad en llamadas al LLM.
-
-### Test de skill contract
-Reescrito `tests/test_skill_contract.py` para probar el flujo de fallback: cuando Ollama no está disponible, la skill `content_generator` retorna una justificación sintética en lugar de lanzar excepción.
+```bash
+pip install ruff
+ruff check backend/ tests/
+ruff format --check backend/ tests/
+```
 
 ---
 
@@ -129,10 +167,9 @@ Reescrito `tests/test_skill_contract.py` para probar el flujo de fallback: cuand
 
 ```
 StackX/
-├── docs/
-│   ├── agents.md        # Definición de agentes consolidados
-│   └── skills.md        # Contratos e interfaz de super-skills
 ├── backend/
+│   ├── alembic/              # Migraciones (Alembic)
+│   ├── alembic.ini
 │   └── app/
 │       ├── main.py
 │       ├── database.py
@@ -140,20 +177,72 @@ StackX/
 │       ├── schemas.py
 │       ├── recommender.py
 │       ├── ai_client.py
-│       ├── sanity_sync.py   # Incluye scheduler (fusionados)
+│       ├── sanity_sync.py
 │       ├── skills_registry.py
+│       ├── seed_data.py
+│       ├── routes/
+│       │   ├── recommend.py
+│       │   └── admin.py
 │       └── ai_skills/
 │           ├── content_generator.py
 │           └── data_analysis.py
-├── frontend/            # Next.js
-├── tests/
-└── docker-compose.yml
+├── frontend/                 # Next.js + Tailwind CSS
+│   ├── pages/
+│   ├── components/
+│   ├── services/
+│   ├── lib/
+│   └── styles/
+├── tests/                    # 28 tests
+│   ├── conftest.py
+│   ├── test_api.py
+│   ├── test_models.py
+│   ├── test_recommender.py
+│   ├── test_schemas.py
+│   └── test_skill_contract.py
+├── docs/
+├── docker-compose.yml
+├── ANALISIS.md               # Reporte completo de mejoras
+├── BITACORA.md               # Registro de desarrollo
+└── AGENTS.md                 # Guía para agentes IA
 ```
+
+---
+
+## Stack técnico
+
+| Capa | Tecnología |
+|---|---|
+| API | FastAPI (Python 3.11+) |
+| Base de datos | SQLAlchemy 2.0 (SQLite / PostgreSQL) |
+| Migraciones | Alembic |
+| Frontend | Next.js 13 (Pages Router) + Tailwind CSS v4 |
+| LLM | Ollama (opcional, vía httpx async) |
+| CMS | Sanity/GROQ (opcional) |
+| Scheduler | APScheduler (opcional) |
+| CI | GitHub Actions (lint + test + build) |
+
+---
+
+## Mejoras recientes (v2.0)
+
+- **28 tests** (vs 2 anteriores) con fixtures reutilizables
+- **Alembic** para migraciones de base de datos
+- **CORS** configurable
+- **Skills asíncronas** (no bloquean el event loop)
+- **Paginación** en endpoint de recomendaciones
+- **Índices** en base de datos para performance
+- **Logging** estructurado en todos los módulos
+- **Frontend** migrado a Tailwind CSS v4 + TypeScript
+- **ErrorBoundary** para manejo de errores en UI
+- **Docker multi-stage** para frontend
+- **Lint automático** con ruff en CI
+- Ver `ANALISIS.md` para el reporte completo.
 
 ---
 
 ## Notas
 
-- El endpoint `/admin/sync-groq/` solo requiere `ADMIN_TOKEN` si la variable está definida. En producción, proteger también a nivel de infraestructura (API Gateway, red privada).
-- El scheduler usa APScheduler en proceso. Para producción con múltiples réplicas, externalizar a Celery/RQ con Redis como broker (ver `BITACORA.md`).
-- Ver `BITACORA.md` para el registro completo de tareas completadas y pendientes.
+- El endpoint `/admin/sync-groq/` solo requiere `ADMIN_TOKEN` si la variable está definida.
+- El scheduler usa APScheduler en proceso. Para producción con múltiples réplicas, externalizar a Celery/RQ con Redis.
+- Ver `BITACORA.md` para el registro completo de cambios.
+- Ver `ANALISIS.md` para el análisis de debilidades y mejoras aplicadas.

@@ -1,7 +1,6 @@
+from sqlalchemy.orm import Session, joinedload
 
-from sqlalchemy.orm import Session
-
-from .models import Technology
+from .models import Technology, TechScore
 
 
 def calculate_score_for_tech(tech: Technology, user_weights: dict[str, float]) -> float:
@@ -17,8 +16,14 @@ def calculate_score_for_tech(tech: Technology, user_weights: dict[str, float]) -
         return 0.0
     return total_score / total_weights
 
+
 def get_recommendations(db: Session, user_weights: dict[str, float], top_n: int = 3) -> list[dict]:
-    technologies = db.query(Technology).all()
+    technologies = (
+        db.query(Technology)
+        .options(joinedload(Technology.scores).joinedload(TechScore.attribute))
+        .options(joinedload(Technology.category))
+        .all()
+    )
     results = []
 
     for tech in technologies:
@@ -32,3 +37,29 @@ def get_recommendations(db: Session, user_weights: dict[str, float], top_n: int 
 
     recommendations = sorted(results, key=lambda x: x['final_score'], reverse=True)
     return recommendations[:top_n]
+
+
+def get_recommendations_paginated(
+    db: Session, user_weights: dict[str, float],
+    skip: int = 0, limit: int = 10
+) -> list[dict]:
+    technologies = (
+        db.query(Technology)
+        .options(joinedload(Technology.scores).joinedload(TechScore.attribute))
+        .options(joinedload(Technology.category))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    results = []
+
+    for tech in technologies:
+        final_score = calculate_score_for_tech(tech, user_weights)
+        results.append({
+            'name': tech.name,
+            'final_score': round(final_score, 3),
+            'category': tech.category.name if tech.category else None,
+            'tech_id': tech.id,
+        })
+
+    return sorted(results, key=lambda x: x['final_score'], reverse=True)

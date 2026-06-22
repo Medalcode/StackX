@@ -16,10 +16,16 @@ def seed(db: Session):
     db.add_all([a_scal, a_fac, a_ecos])
     db.commit()
 
-    # technologies
-    t_node = Technology(name='Node.js (Express)', description='JS backend', category_id=backend_cat.id)
-    t_fastapi = Technology(name='FastAPI', description='Python modern API', category_id=backend_cat.id)
-    t_go = Technology(name='Go (Gin)', description='Go microservices', category_id=backend_cat.id)
+    cid = backend_cat.id
+    t_node = Technology(
+        name='Node.js (Express)', description='JS backend', category_id=cid
+    )
+    t_fastapi = Technology(
+        name='FastAPI', description='Python modern API', category_id=cid
+    )
+    t_go = Technology(
+        name='Go (Gin)', description='Go microservices', category_id=cid
+    )
     db.add_all([t_node, t_fastapi, t_go])
     db.commit()
 

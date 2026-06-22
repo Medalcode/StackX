@@ -8,9 +8,18 @@
     "start": "next start -p 3000"
   },
   "dependencies": {
+    "@sanity/client": "^3.0.0",
     "next": "^13.4.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@sanity/client": "^3.0.0"
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.17",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^6.0.3"
   }
 }

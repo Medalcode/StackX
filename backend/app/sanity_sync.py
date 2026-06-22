@@ -1,26 +1,26 @@
-import os
 import logging
+import os
 from collections.abc import Callable
 
 import requests
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
-
 from .database import SessionLocal
 from .models import Category, Technology
+
+logger = logging.getLogger("stackx.sanity_sync")
 
 SANITY_PROJECT_ID = os.getenv('SANITY_PROJECT_ID')
 SANITY_DATASET = os.getenv('SANITY_DATASET', 'production')
 SANITY_API_VERSION = os.getenv('SANITY_API_VERSION', '2024-01-01')
 SANITY_TOKEN = os.getenv('SANITY_TOKEN')
 
+
 def fetch_technologies():
     if not SANITY_PROJECT_ID:
         raise RuntimeError('SANITY_PROJECT_ID not set')
 
     url = f"https://{SANITY_PROJECT_ID}.api.sanity.io/v{SANITY_API_VERSION}/data/query/{SANITY_DATASET}"
-    # Basic GROQ to fetch technology docs; adjust according to your schema
     groq = '*[_type == "technology"]{_id, name, description, category->{name}}'
     try:
         resp = requests.get(url, params={'query': groq}, headers={
@@ -30,8 +30,9 @@ def fetch_technologies():
         data = resp.json()
         return data.get('result', [])
     except Exception as e:
-        logger.error(f"Error fetching from Sanity: {e}")
+        logger.error("Error fetching from Sanity: %s", e)
         return []
+
 
 def upsert_technologies(db: Session, techs):
     try:
@@ -40,7 +41,6 @@ def upsert_technologies(db: Session, techs):
             desc = t.get('description')
             cat = t.get('category', {}).get('name') if t.get('category') else None
 
-            # find or create category
             cat_obj = None
             if cat:
                 cat_obj = db.query(Category).filter_by(name=cat).first()
@@ -51,7 +51,10 @@ def upsert_technologies(db: Session, techs):
 
             tech_obj = db.query(Technology).filter_by(name=name).first()
             if not tech_obj:
-                tech_obj = Technology(name=name, description=desc, category_id=cat_obj.id if cat_obj else None)
+                category_id = cat_obj.id if cat_obj else None
+                tech_obj = Technology(
+                    name=name, description=desc, category_id=category_id
+                )
                 db.add(tech_obj)
             else:
                 tech_obj.description = desc
@@ -60,8 +63,9 @@ def upsert_technologies(db: Session, techs):
         db.commit()
     except Exception as e:
         db.rollback()
-        logger.error(f"Error upserting technologies: {e}")
+        logger.error("Error upserting technologies: %s", e)
         raise
+
 
 def sync():
     techs = fetch_technologies()
@@ -71,9 +75,7 @@ def sync():
     finally:
         db.close()
 
-# ---------------------------------------------------------------------------
-# Scheduler (fusionado desde scheduler.py para reducir atomización)
-# ---------------------------------------------------------------------------
+
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.interval import IntervalTrigger
@@ -85,7 +87,6 @@ _scheduler: object | None = None
 
 
 def start_scheduler(job_func: Callable):
-    """Inicia el scheduler de fondo para sincronizaciones periódicas."""
     global _scheduler
     if _scheduler is not None or _APScheduler is None:
         return
@@ -98,15 +99,16 @@ def start_scheduler(job_func: Callable):
         replace_existing=True,
     )
     _scheduler.start()
+    logger.info("Scheduler started with interval=%ss", interval)
 
 
 def shutdown_scheduler():
-    """Detiene el scheduler de fondo si está activo."""
     global _scheduler
     if _scheduler is None:
         return
     _scheduler.shutdown(wait=False)
     _scheduler = None
+    logger.info("Scheduler shut down")
 
 
 if __name__ == '__main__':

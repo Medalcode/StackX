@@ -1,15 +1,9 @@
-"""Registro dinámico de skills.
-
-Provee funciones para cargar módulos desde `backend/app/ai_skills/`, registrar y obtener skills.
-
-API pública mínima:
-- `load_all_skills()` -> None
-- `get_skill(name)` -> module or None
-- `all_skills()` -> List[str]
-"""
 import importlib.util
+import logging
 import sys
 from pathlib import Path
+
+logger = logging.getLogger("stackx.skills_registry")
 
 ROOT = Path(__file__).resolve().parent
 SKILLS_FOLDER = ROOT / "ai_skills"
@@ -28,7 +22,6 @@ def _load_module_from_path(path: Path):
 
 
 def load_all_skills():
-    """Carga todos los módulos .py en `ai_skills` y registra aquellos que exportan `SKILL_NAME` y `run_skill`."""
     if not SKILLS_FOLDER.exists():
         return
     for p in SKILLS_FOLDER.glob("*.py"):
@@ -40,9 +33,8 @@ def load_all_skills():
             run = getattr(module, "run_skill", None)
             if name and callable(run):
                 _registry[name] = module
-        except Exception:
-            # No propagamos errores en la carga automática; se recomienda loggear externamente.
-            continue
+        except Exception as e:
+            logger.warning("Failed to load skill %s: %s", p.name, e)
 
 
 def get_skill(name: str) -> object | None:
@@ -53,8 +45,7 @@ def all_skills():
     return list(_registry.keys())
 
 
-# Cargar al importar para conveniencia; la aplicación puede llamar explícitamente también.
 try:
     load_all_skills()
-except Exception:
-    pass
+except Exception as e:
+    logger.error("Failed to load skills at import: %s", e)
