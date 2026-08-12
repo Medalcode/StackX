@@ -39,3 +39,16 @@ async def test_get_paginated_stack_recommendations_service(db_session):
         assert rec.name is not None
         assert rec.final_score > 0
         assert rec.justification is not None
+
+
+@pytest.mark.asyncio
+async def test_export_stack_recommendations_markdown_service(db_session):
+    payload = UserWeights(weights={"Escalabilidad": 0.9}, proyecto="Export Unit Test")
+    md_text = await recommendation_service.export_stack_recommendations_markdown(
+        db_session, payload
+    )
+
+    assert isinstance(md_text, str)
+    assert "# Dictamen Técnico de Arquitectura — Export Unit Test" in md_text
+    assert "## Stacks Recomendados" in md_text
+

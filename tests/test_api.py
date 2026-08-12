@@ -106,3 +106,17 @@ def test_admin_sync_valid_token_header(client, monkeypatch):
     data = resp.json()
     assert data["status"] == "accepted"
 
+
+@pytest.mark.integration
+def test_recommend_export_markdown_endpoint(client):
+    resp = client.post(
+        "/recommend-stack/export-markdown/",
+        json={"weights": {"Escalabilidad": 0.9}, "proyecto": "SaaS Demo"},
+    )
+    assert resp.status_code == 200
+    assert "text/markdown" in resp.headers["content-type"]
+    text = resp.text
+    assert "# Dictamen Técnico de Arquitectura — SaaS Demo" in text
+    assert "## Stacks Recomendados" in text
+
+

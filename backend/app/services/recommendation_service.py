@@ -78,3 +78,42 @@ async def get_paginated_stack_recommendations(
         skip=skip,
         limit=limit,
     )
+
+
+async def export_stack_recommendations_markdown(
+    db: Session,
+    payload: UserWeights,
+    justification_skill: str | None = None,
+    top_n: int = 3,
+) -> str:
+    response = await get_stack_recommendations(
+        db, payload, justification_skill=justification_skill, top_n=top_n
+    )
+    proyecto_name = payload.proyecto or "Proyecto SaaS"
+
+    lines = [
+        f"# Dictamen Técnico de Arquitectura — {proyecto_name}",
+        "",
+        "## Prioridades del Usuario",
+    ]
+    for attr, val in payload.weights.items():
+        lines.append(f"- **{attr}**: {val}")
+    lines.append("")
+
+    lines.append("## Stacks Recomendados")
+    for idx, item in enumerate(response.recommendations, 1):
+        lines.append(f"### {idx}. {item.name} (Score: {item.final_score})")
+        if item.category:
+            lines.append(f"**Categoría:** {item.category}")
+        lines.append("")
+        lines.append("#### Justificación & Trade-offs")
+        lines.append(item.justification or "Sin justificación detallada.")
+        lines.append("")
+        if item.team_suggestion:
+            lines.append("#### Sugerencia de Equipo")
+            for t in item.team_suggestion:
+                lines.append(f"- {t.get('role', 'Dev')}: {t.get('count', 1)}")
+            lines.append("")
+
+    return "\n".join(lines)
+
