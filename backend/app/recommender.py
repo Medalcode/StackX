@@ -4,7 +4,9 @@ from .models import Technology, TechScore
 
 
 def calculate_score_for_tech(tech: Technology, user_weights: dict[str, float]) -> float:
-    total_weights = sum(user_weights.values()) if user_weights else 0.0
+    if not user_weights:
+        return 0.0
+    total_weights = sum(user_weights.values())
     if total_weights <= 0:
         return 0.0
 
@@ -18,6 +20,19 @@ def calculate_score_for_tech(tech: Technology, user_weights: dict[str, float]) -
 
 
 def get_recommendations(db: Session, user_weights: dict[str, float], top_n: int = 3) -> list[dict]:
+    if not user_weights or sum(user_weights.values()) <= 0:
+        query = db.query(Technology).options(joinedload(Technology.category))
+        technologies = query.limit(top_n).all()
+        return [
+            {
+                'name': tech.name,
+                'final_score': 0.0,
+                'category': tech.category.name if tech.category else None,
+                'tech_id': tech.id,
+            }
+            for tech in technologies
+        ]
+
     technologies = (
         db.query(Technology)
         .options(joinedload(Technology.scores).joinedload(TechScore.attribute))
@@ -63,3 +78,4 @@ def get_recommendations_paginated(
         })
 
     return sorted(results, key=lambda x: x['final_score'], reverse=True)
+
