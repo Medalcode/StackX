@@ -139,26 +139,31 @@ curl -X POST http://localhost:8000/admin/sync-groq/ \
 
 ---
 
-## Tests
+### Tests
 
 ```bash
-pip install pytest
-pytest -q tests/ -v
+pip install pytest pytest-asyncio pytest-cov
+python -m pytest -v tests/
+
+# Smoke tests (Ultra-rápido):
+python -m pytest -m smoke
 ```
 
-Actualmente **28 tests** en 6 suites:
-- `test_api.py` — endpoints REST
-- `test_models.py` — modelo de datos SQLAlchemy
+Actualmente **35 tests** en 8 suites:
+- `test_api.py` — endpoints REST (paginación, headers, admin tokens)
+- `test_recommendation_service.py` — capa de servicio
+- `test_sanity_sync.py` — sincronización con Sanity y base de datos
+- `test_models.py` — modelo de datos SQLAlchemy e índices
 - `test_recommender.py` — motor de recomendación
-- `test_schemas.py` — schemas Pydantic
+- `test_schemas.py` — schemas Pydantic V2
 - `test_skill_contract.py` — skills y fallback LLM
 
 ### Lint
 
 ```bash
 pip install ruff
-ruff check backend/ tests/
-ruff format --check backend/ tests/
+python -m ruff check backend/ tests/
+python -m ruff format --check backend/ tests/
 ```
 
 ---
@@ -180,6 +185,8 @@ StackX/
 │       ├── sanity_sync.py
 │       ├── skills_registry.py
 │       ├── seed_data.py
+│       ├── services/         # Capa de Servicio (Service Layer)
+│       │   └── recommendation_service.py
 │       ├── routes/
 │       │   ├── recommend.py
 │       │   └── admin.py
@@ -192,15 +199,18 @@ StackX/
 │   ├── services/
 │   ├── lib/
 │   └── styles/
-├── tests/                    # 28 tests
+├── tests/                    # 35 tests (100% pasando, 78% cobertura)
 │   ├── conftest.py
 │   ├── test_api.py
 │   ├── test_models.py
+│   ├── test_recommendation_service.py
 │   ├── test_recommender.py
+│   ├── test_sanity_sync.py
 │   ├── test_schemas.py
 │   └── test_skill_contract.py
 ├── docs/
 ├── docker-compose.yml
+├── CHANGELOG.md              # Registro formal de versiones (Keep a Changelog)
 ├── ANALISIS.md               # Reporte completo de mejoras
 ├── BITACORA.md               # Registro de desarrollo
 └── AGENTS.md                 # Guía para agentes IA
