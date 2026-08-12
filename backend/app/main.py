@@ -27,11 +27,13 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
             sanity_sync.sync()
         except Exception as e:
             logger.error("Sanity sync failed on startup: %s", e)
-        try:
-            start_scheduler(sanity_sync.sync)
-        except Exception as e:
-            logger.error("Scheduler start failed: %s", e)
+        if os.getenv('ENABLE_IN_PROCESS_SCHEDULER', 'false').lower() == 'true':
+            try:
+                start_scheduler(sanity_sync.sync)
+            except Exception as e:
+                logger.error("Scheduler start failed: %s", e)
     yield
+
 
 
 app = FastAPI(title='Stack Recommender', lifespan=lifespan)
