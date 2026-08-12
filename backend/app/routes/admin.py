@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
@@ -18,8 +19,9 @@ def _validate_admin_token(request: Request):
     else:
         supplied = header_token
 
-    if not admin_token or not supplied or supplied != admin_token:
+    if not admin_token or not supplied or not secrets.compare_digest(supplied, admin_token):
         raise HTTPException(status_code=403, detail='Forbidden: Invalid or missing ADMIN_TOKEN')
+
 
 
 @router.post('/sync-groq/')
