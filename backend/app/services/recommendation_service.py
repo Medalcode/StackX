@@ -169,3 +169,22 @@ async def export_stack_recommendations_markdown(
 
     return "\n".join(lines)
 
+
+_favorites_store: list[dict] = []
+
+
+def add_favorite_stack(payload: UserWeights, name: str | None = None) -> dict:
+    fav_item = {
+        "id": len(_favorites_store) + 1,
+        "name": name or payload.proyecto or f"Favorito #{len(_favorites_store) + 1}",
+        "weights": payload.weights,
+        "proyecto": payload.proyecto,
+    }
+    _favorites_store.append(fav_item)
+    return fav_item
+
+
+def get_favorite_stacks() -> list[dict]:
+    return _favorites_store
+
+

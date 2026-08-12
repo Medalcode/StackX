@@ -120,3 +120,21 @@ def test_recommend_export_markdown_endpoint(client):
     assert "## Stacks Recomendados" in text
 
 
+@pytest.mark.integration
+def test_favorites_endpoints(client):
+    post_resp = client.post(
+        "/recommend-stack/favorites/?name=Mi%20Stack%20Fav",
+        json={"weights": {"Escalabilidad": 0.95}, "proyecto": "Fav Project"},
+    )
+    assert post_resp.status_code == 200
+    data = post_resp.json()
+    assert data["name"] == "Mi Stack Fav"
+    assert data["proyecto"] == "Fav Project"
+
+    get_resp = client.get("/recommend-stack/favorites/")
+    assert get_resp.status_code == 200
+    favs = get_resp.json()
+    assert len(favs) > 0
+
+
+

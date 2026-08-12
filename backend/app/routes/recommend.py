@@ -54,3 +54,14 @@ async def recommend_stack_paginated(
     )
 
 
+@router.post('/recommend-stack/favorites/')
+def create_favorite(payload: UserWeights, name: str | None = Query(None)):
+    return recommendation_service.add_favorite_stack(payload, name=name)
+
+
+@router.get('/recommend-stack/favorites/')
+def list_favorites():
+    return recommendation_service.get_favorite_stacks()
+
+
+
