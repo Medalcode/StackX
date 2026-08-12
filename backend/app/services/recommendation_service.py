@@ -1,4 +1,6 @@
 import asyncio
+import hashlib
+import time
 
 from sqlalchemy.orm import Session
 
@@ -16,12 +18,59 @@ DEFAULT_TEAM_SUGGESTION = [
 ]
 
 
+class RecommendationCache:
+    def __init__(self, ttl_seconds: int = 300, max_size: int = 200):
+        self.ttl_seconds = ttl_seconds
+        self.max_size = max_size
+        self._store: dict[str, tuple[float, RecommendationResponse]] = {}
+
+    def _make_key(self, payload: UserWeights, justification_skill: str | None, top_n: int) -> str:
+        sorted_weights = sorted(payload.weights.items()) if payload.weights else []
+        raw_key = f"{sorted_weights}:{payload.proyecto}:{justification_skill}:{top_n}"
+        return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
+    def get(
+        self, payload: UserWeights, justification_skill: str | None, top_n: int
+    ) -> RecommendationResponse | None:
+        key = self._make_key(payload, justification_skill, top_n)
+        entry = self._store.get(key)
+        if not entry:
+            return None
+        created_at, response = entry
+        if time.time() - created_at > self.ttl_seconds:
+            del self._store[key]
+            return None
+        return response
+
+    def set(
+        self,
+        payload: UserWeights,
+        justification_skill: str | None,
+        top_n: int,
+        response: RecommendationResponse,
+    ) -> None:
+        if len(self._store) >= self.max_size:
+            self._store.clear()
+        key = self._make_key(payload, justification_skill, top_n)
+        self._store[key] = (time.time(), response)
+
+    def clear(self) -> None:
+        self._store.clear()
+
+
+cache = RecommendationCache()
+
+
 async def get_stack_recommendations(
     db: Session,
     payload: UserWeights,
     justification_skill: str | None = None,
     top_n: int = 3,
 ) -> RecommendationResponse:
+    cached_response = cache.get(payload, justification_skill, top_n)
+    if cached_response is not None:
+        return cached_response
+
     user_weights = payload.weights
     projects = recommender.get_recommendations(db, user_weights, top_n=top_n)
 
@@ -43,7 +92,10 @@ async def get_stack_recommendations(
             )
         )
 
-    return RecommendationResponse(recommendations=results)
+    response = RecommendationResponse(recommendations=results)
+    cache.set(payload, justification_skill, top_n, response)
+    return response
+
 
 
 async def get_paginated_stack_recommendations(

@@ -52,3 +52,18 @@ async def test_export_stack_recommendations_markdown_service(db_session):
     assert "# Dictamen Técnico de Arquitectura — Export Unit Test" in md_text
     assert "## Stacks Recomendados" in md_text
 
+
+@pytest.mark.asyncio
+async def test_recommendation_cache_behavior(db_session):
+    recommendation_service.cache.clear()
+    payload = UserWeights(weights={"Escalabilidad": 0.77}, proyecto="Cache Test")
+
+    res1 = await recommendation_service.get_stack_recommendations(db_session, payload, top_n=2)
+    res2 = await recommendation_service.get_stack_recommendations(db_session, payload, top_n=2)
+
+    assert res1 == res2
+    cached = recommendation_service.cache.get(payload, None, 2)
+    assert cached is not None
+    assert cached.recommendations == res1.recommendations
+
+
