@@ -4,16 +4,16 @@ from .models import Technology, TechScore
 
 
 def calculate_score_for_tech(tech: Technology, user_weights: dict[str, float]) -> float:
-    total_score = 0.0
     total_weights = sum(user_weights.values()) if user_weights else 0.0
+    if total_weights <= 0:
+        return 0.0
 
+    total_score = 0.0
     for score in tech.scores:
         attr_name = score.attribute.name
         if attr_name in user_weights:
             total_score += score.value * user_weights[attr_name]
 
-    if total_weights <= 0:
-        return 0.0
     return total_score / total_weights
 
 

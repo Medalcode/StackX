@@ -68,6 +68,9 @@ def upsert_technologies(db: Session, techs):
 
 
 def sync():
+    if not SANITY_PROJECT_ID:
+        logger.warning("Sanity sync skipped: SANITY_PROJECT_ID not set")
+        return
     techs = fetch_technologies()
     db = SessionLocal()
     try:

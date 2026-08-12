@@ -9,11 +9,7 @@ OLLAMA_URL = os.getenv("OLLAMA_URL")
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "10"))
 
 try:
-    from .skills_registry import all_skills, get_skill, load_all_skills
-    try:
-        load_all_skills()
-    except Exception as e:
-        logger.warning("Failed to load skills on import: %s", e)
+    from .skills_registry import all_skills, get_skill
 except Exception as e:
     logger.warning("Skills registry not available: %s", e)
 
