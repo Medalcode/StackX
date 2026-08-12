@@ -18,9 +18,9 @@ jobs:
       - name: Install deps
         run: python -m pip install ruff
       - name: Ruff lint
-        run: ruff check backend/
+        run: ruff check backend/ tests/
       - name: Ruff format check
-        run: ruff format --check backend/
+        run: ruff format --check backend/ tests/
 
   test-backend:
     runs-on: ubuntu-latest
@@ -31,9 +31,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install deps
-        run: python -m pip install -r backend/requirements.txt
+        run: python -m pip install -r backend/requirements.txt pytest-asyncio pytest-cov
       - name: Run tests
-        run: pytest -q tests/ -v
+        run: python -m pytest -v tests/
 
   build-frontend:
     runs-on: ubuntu-latest

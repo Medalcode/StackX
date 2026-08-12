@@ -27,3 +27,9 @@ test.db
 node_modules/
 .next/
 npm-debug.log*
+
+# Test and tool outputs
+.coverage
+.pytest_cache/
+graphify-out/
+
