@@ -139,6 +139,20 @@ curl -X POST http://localhost:8000/admin/sync-groq/ \
 
 ---
 
+### `POST /recommend-stack/export-markdown/`
+Genera e imprime un dictamen técnico de arquitectura en formato Markdown estructurado.
+
+```bash
+curl -X POST http://localhost:8000/recommend-stack/export-markdown/ \
+  -H "Content-Type: application/json" \
+  -d '{"weights": {"Escalabilidad": 0.9}, "proyecto": "Mi SaaS"}'
+```
+
+### `POST /recommend-stack/favorites/` y `GET /recommend-stack/favorites/`
+Guarda y consulta las configuraciones de stack favoritas seleccionadas por el usuario.
+
+---
+
 ### Tests
 
 ```bash
@@ -149,14 +163,14 @@ python -m pytest -v tests/
 python -m pytest -m smoke
 ```
 
-Actualmente **35 tests** en 8 suites:
-- `test_api.py` — endpoints REST (paginación, headers, admin tokens)
-- `test_recommendation_service.py` — capa de servicio
+Actualmente **39 tests** en 8 suites (100% de éxito):
+- `test_api.py` — endpoints REST (paginación, headers, rate limiting, exportador markdown, favoritos, admin tokens)
+- `test_recommendation_service.py` — capa de servicio, caching SHA256 y exportador markdown
 - `test_sanity_sync.py` — sincronización con Sanity y base de datos
 - `test_models.py` — modelo de datos SQLAlchemy e índices
-- `test_recommender.py` — motor de recomendación
+- `test_recommender.py` — motor de recomendación optimizado
 - `test_schemas.py` — schemas Pydantic V2
-- `test_skill_contract.py` — skills y fallback LLM
+- `test_skill_contract.py` — skills y fallback LLM en 3 niveles
 
 ### Lint
 
@@ -176,30 +190,34 @@ StackX/
 │   ├── alembic/              # Migraciones (Alembic)
 │   ├── alembic.ini
 │   └── app/
-│       ├── main.py
+│       ├── main.py           # FastAPI, Rate Limiting y Lifespan
 │       ├── database.py
 │       ├── models.py
 │       ├── schemas.py
-│       ├── recommender.py
+│       ├── recommender.py    # Motor de recomendación optimizado
 │       ├── ai_client.py
 │       ├── sanity_sync.py
 │       ├── skills_registry.py
 │       ├── seed_data.py
-│       ├── services/         # Capa de Servicio (Service Layer)
+│       ├── services/         # Capa de Servicio (Service Layer + SHA256 Caching)
 │       │   └── recommendation_service.py
 │       ├── routes/
-│       │   ├── recommend.py
+│       │   ├── recommend.py  # Endpoints REST (Recomendaciones, Export, Favoritos)
 │       │   └── admin.py
 │       └── ai_skills/
 │           ├── content_generator.py
 │           └── data_analysis.py
 ├── frontend/                 # Next.js + Tailwind CSS
 │   ├── pages/
+│   │   ├── index.jsx         # Formulario principal de sliders y recomendaciones
+│   │   ├── compare.jsx       # Comparador Side-by-Side de arquitecturas
+│   │   └── tech.jsx          # Catálogo de tecnologías (API REST)
 │   ├── components/
+│   ├── types/                # Interfaces TypeScript (index.ts)
 │   ├── services/
 │   ├── lib/
 │   └── styles/
-├── tests/                    # 35 tests (100% pasando, 78% cobertura)
+├── tests/                    # 39 tests (100% pasando)
 │   ├── conftest.py
 │   ├── test_api.py
 │   ├── test_models.py
@@ -209,6 +227,7 @@ StackX/
 │   ├── test_schemas.py
 │   └── test_skill_contract.py
 ├── docs/
+│   └── adr/                  # Architecture Decision Records (ADR-001, ADR-002, ADR-003)
 ├── docker-compose.yml
 ├── CHANGELOG.md              # Registro formal de versiones (Keep a Changelog)
 ├── ANALISIS.md               # Reporte completo de mejoras
@@ -222,20 +241,27 @@ StackX/
 
 | Capa | Tecnología |
 |---|---|
-| API | FastAPI (Python 3.11+) |
+| API | FastAPI (Python 3.11+) + `slowapi` Rate Limiting |
 | Base de datos | SQLAlchemy 2.0 (SQLite / PostgreSQL) |
 | Migraciones | Alembic |
-| Frontend | Next.js 13 (Pages Router) + Tailwind CSS v4 |
+| Almacenamiento en Caché | `RecommendationCache` SHA256 in-memory (<1ms latencia) |
+| Frontend | Next.js 13 (Pages Router) + Tailwind CSS v4 + TypeScript |
 | LLM | Ollama (opcional, vía httpx async) |
 | CMS | Sanity/GROQ (opcional) |
-| Scheduler | APScheduler (opcional) |
+| Scheduler | APScheduler (controlado vía `ENABLE_IN_PROCESS_SCHEDULER`) |
 | CI | GitHub Actions (lint + test + build) |
 
 ---
 
 ## Mejoras recientes (v2.0)
 
-- **28 tests** (vs 2 anteriores) con fixtures reutilizables
+- **39 tests** (vs 2 anteriores) con fixtures reutilizables
+- **Rate Limiting** integrado con `slowapi` contra ataques DoS
+- **Almacenamiento en Caché SHA256** para respuestas <1ms en consultas repetitivas
+- **Exportador de Reportes Ejecutivos** en Markdown estructurado
+- **Comparador Side-by-Side** de arquitecturas en la UI (`/compare`)
+- **Persistencia de Favoritos** (`/recommend-stack/favorites/`)
+- **ADRs** (Architecture Decision Records) documentados en `docs/adr/`
 - **Alembic** para migraciones de base de datos
 - **CORS** configurable
 - **Skills asíncronas** (no bloquean el event loop)
@@ -246,13 +272,14 @@ StackX/
 - **ErrorBoundary** para manejo de errores en UI
 - **Docker multi-stage** para frontend
 - **Lint automático** con ruff en CI
-- Ver `ANALISIS.md` para el reporte completo.
+- Ver `ANALISIS.md` y `CHANGELOG.md` para el reporte completo.
 
 ---
 
 ## Notas
 
 - El endpoint `/admin/sync-groq/` solo requiere `ADMIN_TOKEN` si la variable está definida.
-- El scheduler usa APScheduler en proceso. Para producción con múltiples réplicas, externalizar a Celery/RQ con Redis.
+- El scheduler in-process está desactivado por defecto para entornos multi-worker y se habilita con `ENABLE_IN_PROCESS_SCHEDULER=true`.
 - Ver `BITACORA.md` para el registro completo de cambios.
 - Ver `ANALISIS.md` para el análisis de debilidades y mejoras aplicadas.
+
